@@ -299,6 +299,7 @@
   let proyectiles = [], explosiones = [], lastT = 0;
   let notas = [], lastN = 0;
   let palabrasCur = [], curIniT = 0, curDur = 1;
+  let galaxiaInicio = -1, rotAng = 0, camZ = 0;
   function crearProyectiles() {
     proyectiles = [];
     explosiones = [];
@@ -521,6 +522,30 @@
     }
     ctx.restore();
 
+    // ---------- CORAZÓN / GALAXIA ----------
+    const gal = galaxiaInicio >= 0;
+    const tG = gal ? ahora - galaxiaInicio : 9999;
+    const minS = Math.min(W, H);
+    const heartA = gal ? Math.pow(1 - Math.min(1, tG / 4.5), 1.4) : 1;
+
+    if (gal) {
+      // fondo oscuro estilo galaxia (cada vez más profundo)
+      const osc = Math.max(0, Math.min(1, (tG - 1) / 2.5));
+      const gbg = ctx.createRadialGradient(centroX, centroY * 1.05, 0, centroX, centroY * 1.05, minS * 0.85);
+      gbg.addColorStop(0, 'rgba(26,8,52,' + (0.28 * osc) + ')');
+      gbg.addColorStop(0.6, 'rgba(8,2,24,' + (0.55 * osc) + ')');
+      gbg.addColorStop(1, 'rgba(1,0,8,' + (0.92 * osc) + ')');
+      ctx.fillStyle = gbg;
+      ctx.fillRect(0, 0, W, H);
+      const ng = ctx.createRadialGradient(centroX, centroY, 0, centroX, centroY, minS * 0.12);
+      ng.addColorStop(0, 'rgba(255,150,190,0.22)');
+      ng.addColorStop(1, 'rgba(255,150,190,0)');
+      ctx.fillStyle = ng;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // silueta del corazón (se desvanece cuando llega la galaxia)
+    ctx.globalAlpha = gal ? heartA : 1;
     contornoFondo();
     const el = performance.now() - t0;
     const cores = ['#ff6f9f', '#ff8fb3', '#ffb3cd', '#ffffff'];
@@ -528,24 +553,30 @@
     for (const p of partes) {
       if (el < p.ini) continue;
       visibles++;
-      pintaLetra(p.tx, p.ty, p.ch, Math.min(1, (el - p.ini) / 400), cores[Math.floor(p.ini / 35) % cores.length], true);
+      pintaLetra(p.tx, p.ty, p.ch, Math.min(1, (el - p.ini) / 400) * (gal ? heartA : 1), cores[Math.floor(p.ini / 35) % cores.length], true);
     }
     // silueta completa → se marca, el relleno llega al empezar la letra
     if (!formado && visibles >= partes.length) {
       formado = true;
     }
+    ctx.globalAlpha = 1;
+
     const el2 = performance.now() - tFill;
-    // el relleno se queda en el rosa clásico y, una vez formado,
-    // "respira": cada letra se desvanece y vuelve con fade lento y escalonado
-    const ultimo = relleno.length ? relleno[relleno.length - 1].ini + 300 : 0;
-    for (const p of relleno) {
-      let local = Math.min(1, (el2 - p.ini) / 300);
-      if (el2 > ultimo) {
-        const respiro = Math.pow(0.5 + 0.5 * Math.sin((el2 / 1000) * Math.PI * 2 / 4.2 + p.ph), 1.2);
-        local *= respiro;
+    if (!gal) {
+      // -------- relleno clásico que "respira" --------
+      const ultimo = relleno.length ? relleno[relleno.length - 1].ini + 300 : 0;
+      for (const p of relleno) {
+        let local = Math.min(1, (el2 - p.ini) / 300);
+        if (el2 > ultimo) {
+          const respiro = Math.pow(0.5 + 0.5 * Math.sin((el2 / 1000) * Math.PI * 2 / 4.2 + p.ph), 1.2);
+          local *= respiro;
+        }
+        if (local <= 0) continue;
+        pintaLetra(p.tx, p.ty, p.ch, local, '#ff8fb3', false, fsLetra * 1.15);
       }
-      if (local <= 0) continue;
-      pintaLetra(p.tx, p.ty, p.ch, local, '#ff8fb3', false, fsLetra * 1.15);
+    } else {
+      // -------- los LOVE YOU migran al espiral y entran al túnel --------
+      pintarGalaxia(tG, dt, minS);
     }
     ctx.globalAlpha = 1;
     ctx.shadowBlur = 0;
@@ -726,16 +757,71 @@
     }));
   }
 
+  /* ============ Galaxia: los LOVE YOU forman un espiral sin fin ============ */
+  function suavizar(x) {
+    return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  }
+
+  function iniciarGalaxia() {
+    const n = relleno.length;
+    const minS = Math.min(W, H);
+    for (let i = 0; i < n; i++) {
+      const p = relleno[i];
+      const t = i / n;
+      const arm = i % 2;
+      const R = (28 + t * t * (minS * 0.30)) * (0.92 + Math.random() * 0.16);
+      p.gt = t * Math.PI * 5.5 + arm * Math.PI + (Math.random() - 0.5) * 0.06;
+      p.gr = R;
+      p.z = R * 1.7 + 40;
+    }
+    rotAng = 0;
+    camZ = 0;
+  }
+
+  function pintarGalaxia(tG, dt, minS) {
+    const cx = W / 2, cy = H * 0.46;
+    if (tG < 9) rotAng += 0.09 * dt;
+    else rotAng += (0.15 + Math.min(1, (tG - 9) * 0.2)) * dt;
+    if (tG > 9) camZ += dt * 95;
+    const interp = suavizar(Math.min(1, tG / 5));
+
+    if (tG > 9) {
+      // ---------- TÚNEL: cámara adentrándose al espiral (sin fin) ----------
+      const foc = 620;
+      for (const p of relleno) {
+        if (foc + (p.z - camZ) < 45) p.z += 1600;
+      }
+      const orden = relleno.slice().sort((a, b) => (b.z - camZ) - (a.z - camZ));
+      for (const p of orden) {
+        const dz = p.z - camZ;
+        const f = foc / (foc + dz);
+        const th = p.gt + rotAng;
+        const X = cx + Math.cos(th) * p.gr * f;
+        const Y = cy + Math.sin(th) * p.gr * f * 0.62;
+        pintaLetra(X, Y, p.ch, Math.min(0.95, 0.35 + f * 0.05), '#ff8fb3', false, fsLetra * Math.min(2.6, 0.8 + f * 0.14));
+      }
+      // estela luminosa en el centro del túnel
+      const ng = ctx.createRadialGradient(cx, cy, 0, cx, cy, minS * 0.18);
+      ng.addColorStop(0, 'rgba(255,190,215,0.35)');
+      ng.addColorStop(1, 'rgba(255,190,215,0)');
+      ctx.fillStyle = ng;
+      ctx.fillRect(0, 0, W, H);
+      return;
+    }
+
+    // ---------- ESPIRAL PLANO (formándose y girando) ----------
+    for (const p of relleno) {
+      const th = p.gt + rotAng;
+      const tx2 = cx + Math.cos(th) * p.gr;
+      const ty2 = cy + Math.sin(th) * p.gr * 0.62;
+      const X = p.tx + (tx2 - p.tx) * interp;
+      const Y = p.ty + (ty2 - p.ty) * interp;
+      pintaLetra(X, Y, p.ch, 0.55 + 0.45 * interp, '#ff8fb3', false, fsLetra * (1.15 - 0.32 * interp));
+    }
+  }
+
   // ¿el punto está dentro del polígono? (ray casting, respeta el hueco del corazón)
   function puntoEnPoligono(x, y, poly) {
-    let dentro = false;
-    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-      const xi = poly[i][0], yi = poly[i][1];
-      const xj = poly[j][0], yj = poly[j][1];
-      if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) dentro = !dentro;
-    }
-    return dentro;
-  }
 
   // contorno tenue del corazón mientras llegan las letras
   function contornoFondo() {
@@ -760,6 +846,7 @@
     crearProyectiles();
     lastT = 0;
     palabrasCur = [];
+    galaxiaInicio = -1;
     finalShown = false;
     finalMsg.classList.remove('visible');
     relleno = [];
@@ -825,6 +912,11 @@
       void prog.offsetWidth;
       prog.style.transition = 'transform ' + dur + 's linear';
       prog.style.transform = 'scaleX(1)';
+    }
+    // cuando suena "pensé en cómo podría acercarme" arranca la galaxia
+    if (galaxiaInicio < 0 && idx >= 9 && t >= LETRA[9][0] + 0.5) {
+      galaxiaInicio = performance.now() / 1000;
+      iniciarGalaxia();
     }
     // cuando el cantante termina, aparece el mensaje final
     if (!finalShown && idx === LETRA.length - 1 && t >= LETRA[idx][0] + 4.5) {
