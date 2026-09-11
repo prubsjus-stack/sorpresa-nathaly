@@ -535,9 +535,17 @@
       formado = true;
     }
     const el2 = performance.now() - tFill;
-    // el relleno se queda en el rosa clásico
+    // el relleno se queda en el rosa clásico y, una vez formado,
+    // "respira": cada letra se desvanece y vuelve con fade lento y escalonado
+    const ultimo = relleno.length ? relleno[relleno.length - 1].ini + 300 : 0;
     for (const p of relleno) {
-      pintaLetra(p.tx, p.ty, p.ch, Math.min(1, (el2 - p.ini) / 300), '#ff8fb3', false, fsLetra * 1.15);
+      let local = Math.min(1, (el2 - p.ini) / 300);
+      if (el2 > ultimo) {
+        const respiro = Math.pow(0.5 + 0.5 * Math.sin((el2 / 1000) * Math.PI * 2 / 4.2 + p.ph), 1.2);
+        local *= respiro;
+      }
+      if (local <= 0) continue;
+      pintaLetra(p.tx, p.ty, p.ch, local, '#ff8fb3', false, fsLetra * 1.15);
     }
     ctx.globalAlpha = 1;
     ctx.shadowBlur = 0;
@@ -713,7 +721,8 @@
     relleno = pos.map((p, idx) => ({
       tx: p.x, ty: p.y,
       ch: PALABRA[idx % PALABRA.length],
-      ini: idx * 14
+      ini: idx * 14,
+      ph: (idx % 40) * 0.16
     }));
   }
 
