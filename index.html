@@ -322,7 +322,7 @@
   let proyectiles = [], explosiones = [], lastT = 0;
   let notas = [], lastN = 0;
   let palabrasCur = [], curIniT = 0, curDur = 1;
-  let galaxiaInicio = -1, rotAng = 0, camZ = 0, cn = null, vuelta = null, heartBack = 0;
+  let galaxiaInicio = -1, rotAng = 0, camZ = 0, cn = null, vuelta = null, heartBack = 0, galaxiaTerminada = false;
   function crearProyectiles() {
     proyectiles = [];
     explosiones = [];
@@ -790,8 +790,8 @@
     { nombre: 'TÚ', frase: 'la que me saca una sonrisa con solo aparecer' },
     { nombre: 'tus ojos', frase: 'cuando te miro se me olvida hasta mi nombre' },
     { nombre: 'tu carita', frase: 'para saber qué es la perfección solo miro tu cara' },
-    { nombre: 'tu personalidad', frase: 'te quiero por cómo sos y no por cómo te ves' },
-    { nombre: 'tu risa', frase: 'cuando te reís se me arregla el día entero' },
+    { nombre: 'tu personalidad', frase: 'te quiero por cómo eres y no por cómo te ves' },
+    { nombre: 'tu risa', frase: 'cuando te ríes se me ilumina el día entero' },
     { nombre: 'tenerte cerca', frase: 'tu presencia me da más paz que mil palabras' },
     { nombre: 'nuestro tiempo', frase: 'cada minuto a tu lado vale más que una vida entera' },
     { nombre: 'tú y yo', frase: 'el destino nos puso en la misma historia' }
@@ -819,47 +819,40 @@
     const cx = W / 2, cy = H * 0.46;
     if (vuelta) { pintarVuelta(minS); return; }
     if (cn) { pintarConstelacion(minS); return; }
-    if (tG < 9) rotAng += 0.09 * dt;
-    else rotAng += (0.15 + Math.min(1, (tG - 9) * 0.2)) * dt;
+    // "enter": la cámara vuela hacia el espiral y se introduce en él
+    const enter = suavizar(Math.max(0, Math.min(1, (tG - 6.5) / 4)));
+    rotAng += (0.09 + 0.1 * enter + Math.max(0, (tG - 9) * 0.2) * enter) * dt;
     if (tG > 9) camZ += dt * 95;
     const interp = suavizar(Math.min(1, tG / 5));
-
-    if (tG > 9) {
-      // ---------- TÚNEL: cámara adentrándose al espiral (sin fin) ----------
-      const foc = 620;
-      const cerca = 45, lejos = 260;
-      for (const p of relleno) {
-        if (foc + (p.z - camZ) < cerca) p.z += 1600;
-      }
-      const orden = relleno.slice().sort((a, b) => (b.z - camZ) - (a.z - camZ));
-      for (const p of orden) {
-        const dz = p.z - camZ;
-        const f = foc / (foc + dz);
-        let a = Math.min(0.95, 0.35 + f * 0.05);
-        // desaparecen suave al pasar a tu lado en vez de aparecer de golpe
-        if (foc + dz < lejos) a *= Math.max(0, (foc + dz - cerca) / (lejos - cerca));
-        const th = p.gt + rotAng;
-        const X = cx + Math.cos(th) * p.gr * f;
-        const Y = cy + Math.sin(th) * p.gr * f * 0.62;
-        pintaLetra(X, Y, p.ch, a, '#ff8fb3', false, fsLetra * Math.min(2.6, 0.8 + f * 0.14));
-      }
-      // estela luminosa en el centro del túnel
-      const ng = ctx.createRadialGradient(cx, cy, 0, cx, cy, minS * 0.18);
-      ng.addColorStop(0, 'rgba(255,190,215,0.35)');
-      ng.addColorStop(1, 'rgba(255,190,215,0)');
-      ctx.fillStyle = ng;
-      ctx.fillRect(0, 0, W, H);
-      return;
+    const foc = 620;
+    const cerca = 45, lejos = 260;
+    for (const p of relleno) {
+      if (tG > 9 && foc + (p.z - camZ) < cerca) p.z += 1600;
     }
-
-    // ---------- ESPIRAL PLANO (formándose y girando) ----------
+    // de lejos se ve el espiral plano; luego la proyección se abre en 3D
     for (const p of relleno) {
       const th = p.gt + rotAng;
-      const tx2 = cx + Math.cos(th) * p.gr;
-      const ty2 = cy + Math.sin(th) * p.gr * 0.62;
-      const X = p.tx + (tx2 - p.tx) * interp;
-      const Y = p.ty + (ty2 - p.ty) * interp;
-      pintaLetra(X, Y, p.ch, 0.55 + 0.45 * interp, '#ff8fb3', false, fsLetra * (1.15 - 0.32 * interp));
+      const xp = Math.cos(th) * p.gr;
+      const yp = Math.sin(th) * p.gr * 0.62;
+      const dz = p.z - camZ;
+      const f = foc / (foc + dz);
+      const X0 = cx + xp, Y0 = cy + yp;
+      const X1 = cx + xp * f, Y1 = cy + yp * f;
+      const X = p.tx + (X0 + (X1 - X0) * enter - p.tx) * interp;
+      const Y = p.ty + (Y0 + (Y1 - Y0) * enter - p.ty) * interp;
+      let a = (0.55 + 0.45 * interp) + ((Math.min(0.95, 0.35 + f * 0.05)) - (0.55 + 0.45 * interp)) * enter;
+      if (tG > 9 && foc + dz < lejos) a *= Math.max(0, (foc + dz - cerca) / (lejos - cerca));
+      const sz = fsLetra * ((1.15 - 0.32 * interp) + (Math.min(2.4, 0.8 + f * 0.13) - (1.15 - 0.32 * interp)) * enter);
+      pintaLetra(X, Y, p.ch, a, '#ff8fb3', false, sz);
+    }
+    // resplandor del núcleo de la galaxia que va creciendo
+    const cg = Math.max(0, interp * (1 - enter * 0.4));
+    if (cg > 0) {
+      const ng = ctx.createRadialGradient(cx, cy, 0, cx, cy, minS * 0.12);
+      ng.addColorStop(0, 'rgba(255,180,205,' + (0.30 * cg) + ')');
+      ng.addColorStop(1, 'rgba(255,180,205,0)');
+      ctx.fillStyle = ng;
+      ctx.fillRect(0, 0, W, H);
     }
   }
 
@@ -877,11 +870,19 @@
         y: H * 0.46 + Math.sin(a) * (minS * 0.20)
       });
     }
+    const foc = 620;
     for (let i = 0; i < n; i++) {
       const p = relleno[i];
       p.gp = i % G;
-      p.cr = 6 + (i % 60);
-      p.ct = i * 2.4;
+      p.cr = 8 + (i % 80);
+      p.ct = i * 2.1;
+      // posición en pantalla que tiene cada letra dentro del túnel
+      const dz = p.z - camZ;
+      const f = foc / (foc + dz);
+      const th = p.gt + rotAng;
+      p.tx0 = W / 2 + Math.cos(th) * p.gr * f;
+      p.ty0 = H * 0.46 + Math.sin(th) * p.gr * f * 0.62;
+      p.tz0 = f;
     }
   }
 
@@ -898,7 +899,8 @@
     cn.cx = cAnt.x + (cAct.x - cAnt.x) * e;
     cn.cy = cAnt.y + (cAct.y - cAnt.y) * e;
     cn.zoom = 1 + 1.15 * e;
-    cn.spin = (cn.spin || 0) + (1 / 60) * 0.12;
+    cn.spin += (1 / 60) * 0.12;
+    const born = suavizar(Math.min(1, te / 2.2));
     if (te < 3.2) {
       // tarjeta intro: "MI MUNDO" / "cosas que me gustan de ti"
       if (!cn.intro) {
@@ -918,25 +920,45 @@
         ocultarFrase();
       }
     }
-    // cámara centrada en la galaxia activa
-    ctx.save();
-    ctx.translate(W / 2, H * 0.46);
-    ctx.scale(cn.zoom, cn.zoom);
-    ctx.translate(-cn.cx, -cn.cy);
+    // cada letra migra suave desde el túnel hasta su galaxia
     for (const p of relleno) {
       const cc = cn.centros[p.gp];
       const ang = p.ct + cn.spin;
-      const X = cc.x + Math.cos(ang) * p.cr;
-      const Y = cc.y + Math.sin(ang) * p.cr * 0.72;
+      const wx = cc.x + Math.cos(ang) * p.cr;
+      const wy = cc.y + Math.sin(ang) * p.cr * 0.72;
       const activo = p.gp === gi;
-      const sz = activo ? fsLetra * 0.9 : fsLetra * 0.42;
-      const a = activo ? 0.9 : 0.3;
+      const sxw = (wx - cn.cx) * cn.zoom + W / 2;
+      const syw = (wy - cn.cy) * cn.zoom + H * 0.46;
+      const szCl = activo ? 0.9 : 0.34;
+      const aCl = activo ? 0.9 : 0.26;
+      const szT = Math.min(2.1, 0.7 + p.tz0 * 0.13);
+      const aT = Math.max(aCl, Math.min(0.9, 0.3 + p.tz0 * 0.12));
+      const sz = fsLetra * (szT * (1 - born) + szCl * cn.zoom * born);
+      const a = aT * (1 - born) + aCl * born;
+      const X = p.tx0 + (sxw - p.tx0) * born;
+      const Y = p.ty0 + (syw - p.ty0) * born;
       pintaLetra(X, Y, p.ch, a, activo ? '#ffd9a0' : '#ff8fb3', activo, sz);
     }
-    ctx.restore();
-    // aura de la galaxia activa, centrada en pantalla
+    // las "TÚ" brillan en el corazón de cada galaxia
+    if (born > 0.85) {
+      const ccx = (cAct.x - cn.cx) * cn.zoom + W / 2;
+      const ccy = (cAct.y - cn.cy) * cn.zoom + H * 0.46;
+      const tsz = fsLetra * 1.45 * cn.zoom;
+      ctx.save();
+      ctx.font = 'bold ' + tsz + 'px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(255,200,120,0.95)';
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = '#fff0c8';
+      ctx.globalAlpha = 0.95;
+      ctx.fillText('T', ccx - tsz * 0.36, ccy);
+      ctx.fillText('Ú', ccx + tsz * 0.36, ccy);
+      ctx.restore();
+    }
+    // aura de la galaxia activa, crece cuando llega la cámara
+    const de = Math.min(0.5, 0.2 + (cn.frase === gi ? 0.18 : 0)) * (0.4 + 0.6 * born);
     const ng = ctx.createRadialGradient(W / 2, H * 0.46, 0, W / 2, H * 0.46, minS * 0.22);
-    const de = Math.min(0.5, 0.22 + (cn.frase === gi ? 0.2 : 0));
     ng.addColorStop(0, 'rgba(255,180,205,' + de + ')');
     ng.addColorStop(1, 'rgba(255,180,205,0)');
     ctx.fillStyle = ng;
@@ -993,6 +1015,7 @@
       cn = null;
       heartBack = 0;
       galaxiaInicio = -1;
+      galaxiaTerminada = true;
     }
   }
 
@@ -1031,6 +1054,7 @@
     lastT = 0;
     palabrasCur = [];
     galaxiaInicio = -1;
+    galaxiaTerminada = false;
     cn = null;
     vuelta = null;
     heartBack = 0;
@@ -1102,7 +1126,7 @@
       prog.style.transform = 'scaleX(1)';
     }
     // cuando suena "pensé en cómo podría acercarme" arranca la galaxia
-    if (galaxiaInicio < 0 && idx >= 9 && t >= LETRA[9][0] + 5.5) {
+    if (galaxiaInicio < 0 && !galaxiaTerminada && idx >= 9 && t >= LETRA[9][0] + 5.5) {
       galaxiaInicio = performance.now() / 1000;
       iniciarGalaxia();
     }
