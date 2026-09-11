@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Para Nathaly ❤️</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Segoe UI', 'Georgia', serif;
+    background: radial-gradient(circle at 50% 30%, #3b0d5c 0%, #1a0533 60%, #12021f 100%);
+    color: #fff;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ---------- Portada ---------- */
+  #portada {
+    position: fixed; inset: 0; z-index: 60;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 26px; text-align: center;
+    background: radial-gradient(circle at center, rgba(30,5,50,0.92) 0%, rgba(18,2,30,0.98) 100%);
+    transition: opacity 1s ease, transform 1s ease;
+  }
+  #portada.oculta { opacity: 0; transform: scale(1.15); pointer-events: none; }
+  .corazon-grande { font-size: 90px; animation: latido 1.4s ease-in-out infinite; filter: drop-shadow(0 0 22px rgba(255,105,160,0.9)); }
+  @keyframes latido { 0%,100%{transform:scale(1)} 25%{transform:scale(1.25)} 50%{transform:scale(1.02)} 75%{transform:scale(1.15)} }
+  .para { font-size: 28px; letter-spacing: 6px; text-transform: uppercase; color: #ffb3cd; }
+  .nombre { font-size: 66px; font-weight: 700; text-shadow: 0 0 34px rgba(255,105,160,0.9); }
+  .cta {
+    margin-top: 10px; padding: 18px 44px; font-size: 20px; cursor: pointer;
+    border: 2px solid #ff6f9f; border-radius: 60px; color: #fff;
+    background: linear-gradient(90deg, #e8336d, #ff6f9f);
+    box-shadow: 0 0 26px rgba(255,105,160,0.7);
+    transition: transform .2s, box-shadow .2s; letter-spacing: 1px;
+  }
+  .cta:hover { transform: scale(1.06); box-shadow: 0 0 42px rgba(255,105,160,1); }
+
+  /* ---------- Lienzo ---------- */
+  #canvas { position: fixed; inset: 0; z-index: 5; display: block; }
+
+  /* ---------- Aura de color animada ---------- */
+  #aurora { position: fixed; inset: -10%; z-index: 4; pointer-events: none; }
+
+  /* ---------- Letra -------------------------------------------------- */
+  #karaoke {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 26px 18px 40px; text-align: center;
+    opacity: 0; transition: opacity .8s ease; pointer-events: none;
+    background: linear-gradient(transparent, rgba(10,1,18,0.85) 55%);
+  }
+  #karaoke.visible { opacity: 1; }
+  #prog {
+    height: 4px; width: 100%; max-width: 420px; border-radius: 4px;
+    background: linear-gradient(90deg, #e8336d, #ffb3cd);
+    transform-origin: left center; transform: scaleX(0);
+    margin-bottom: 8px; box-shadow: 0 0 12px rgba(255,105,160,0.8);
+  }
+  #lineaPrev { font-size: 17px; color: rgba(255,215,230,0.5); min-height: 24px; }
+  #lineaCur {
+    font-size: clamp(22px, 4vw, 34px); font-weight: 700; color: #fff; line-height: 1.4;
+    text-shadow: 0 0 18px rgba(255,105,160,0.9);
+  }
+  body.chorus #lineaCur {
+    color: #ffd9b0;
+    text-shadow: 0 0 24px rgba(255,170,120,0.95);
+  }
+  #lineaCur .pal {
+    color: rgba(255,215,230,0.45);
+    transition: color .18s ease, text-shadow .18s ease;
+  }
+  #lineaCur .pal.on {
+    color: #ffd9a0;
+    text-shadow: 0 0 14px rgba(255,190,120,0.95);
+  }
+  #lineaCur.cambio { animation: pop .35s ease; }
+  @keyframes pop { 0% { transform: scale(.93); opacity: .5; } 100% { transform: scale(1); opacity: 1; } }
+
+  /* ---------- Aviso si falta la canción ---------- */
+  #falta {
+    position: fixed; inset: 0; z-index: 90; display: none;
+    align-items: center; justify-content: center; padding: 24px; text-align: center;
+    background: radial-gradient(circle, rgba(26,5,51,0.96), rgba(12,2,20,0.99));
+  }
+  #falta.active { display: flex; }
+  #falta .box { max-width: 520px; padding: 34px; border-radius: 22px; border: 1px solid rgba(255,150,190,0.4);
+    background: rgba(255,255,255,0.06); backdrop-filter: blur(6px); line-height: 1.8; }
+  #falta h3 { color: #ff8fb3; margin-bottom: 12px; font-size: 24px; }
+  #falta code { background: rgba(255,255,255,0.15); padding: 2px 8px; border-radius: 6px; color: #ffd7e6; }
+  #falta ol { text-align: left; margin: 14px 0 0 20px; font-size: 15px; color: #ecd; }
+  #cerrarFalta { margin-top: 20px; padding: 12px 26px; border: 1px solid #ff6f9f; border-radius: 40px;
+    background: transparent; color: #ff8fb3; cursor: pointer; font-size: 15px; }
+
+  /* ---------- Corazones flotantes ---------- */
+  .corazon { position: absolute; bottom: -60px; color: rgba(255,120,160,0.5); filter: drop-shadow(0 0 8px rgba(255,100,150,0.5)); animation: subir linear infinite; z-index: 1; }
+  @keyframes subir { 0%{transform:translateY(0) rotate(0) scale(.6); opacity:0} 10%{opacity:1} 90%{opacity:1} 100%{transform:translateY(-110vh) rotate(30deg) scale(1.2); opacity:0} }
+</style>
+</head>
+<body>
+
+<!-- Canción de fondo (MP3 local) -->
+<audio id="audio" preload="auto" src="musica/sexto_sentido.mp3"></audio>
+
+<!-- Portada -->
+<div id="portada">
+  <div class="corazon-grande">💖</div>
+  <div class="para">Una sorpresa para</div>
+  <div class="nombre">Nathaly</div>
+  <button class="cta" onclick="iniciar()">Para la mejor esposita ❤️</button>
+</div>
+
+<div id="aurora" aria-hidden="true"></div>
+
+<!-- El corazón se dibuja aquí, formado por la palabra LOVE YOU -->
+<canvas id="canvas"></canvas>
+
+<!-- Letra sincronizada -->
+<div id="karaoke">
+  <div id="prog"></div>
+  <div id="lineaPrev"></div>
+  <div id="lineaCur"></div>
+</div>
+
+<!-- Aviso si falta el MP3 -->
+<div id="falta">
+  <div class="box">
+    <h3>💿 Falta la canción 🎶</h3>
+    <p>Para que suene <strong>“Sexto Sentido”</strong> con la letra sincronizada:</p>
+    <ol>
+      <li>Descarga el audio y guárdalo como:</li>
+      <li><code>C:\SorpresaNatt\musica\sexto_sentido.mp3</code></li>
+      <li>Vuelve a abrir la página y listo 💘</li>
+    </ol>
+    <button id="cerrarFalta" onclick="document.getElementById('falta').classList.remove('active')">Ver la animación igual</button>
+  </div>
+</div>
+
+<script>
+  /* ============ LETRA con tiempos reales (segundos) ============
+     SEXTO SENTIDO — 008RACCA (tiempos tomados de un LRC sincronizado).
+     La canción arranca en 0; la intro es instrumental y el coro
+     entra en ~00:26. */
+  const LETRA = [
+    [26,  "Nena, me siento perdido"],
+    [29,  "Tengo una brújula que me lleva directo a encontrarte"],
+    [33,  "En tu voz un arrullo, sonido"],
+    [36,  "Cora-Corazón, te lo pido, ¿me dejarás amarte?"],
+    [40,  "En tu nombre, mi sexto sentido"],
+    [43,  "Mujer, ¿qué has hecho? Me dejaste viendo todo nublado"],
+    [46,  "Hasta ahora, creo que nunca he querido"],
+    [50,  "Contigo me di cuenta de verdad qué es estar enamorado"],
+    [53,  "El karma me estaba jodiendo y de repente llegaste"],
+    [56,  "Te miré y solo pensé en cómo podría acercarme"],
+    [60,  "Al final, no soy muy bueno en esto como pa' enamorarte"],
+    [64,  "Pero quiero saber tu nombre y dónde puedo encontrarte"],
+    [67,  "Vivo muy cerca y es raro no haberte visto por aquí"],
+    [72,  "Dime qué estás haciendo, nena, cuéntame de ti"],
+    [75,  "¿Cuáles son tus pasatiempos? Dime qué te hace feliz"],
+    [78,  "Entendí tu humor cuando un chiste mío te hizo reír"],
+    [81,  "De mí no hay mucho que hablar, tengo sueños y un rumbo fijo"],
+    [84,  "Algunas cicatrices y un criterio no muy prolijo"],
+    [88,  "Me gusta salir de noche y trabajar en mi disco"],
+    [91,  "Me gané todo lo que tengo aunque nunca fui muy listo"],
+    [95,  "Pero no hablemos de mí, quiero saber si estás libre"],
+    [99,  "Podríamos salir un día a platicar, si te sirve"],
+    [102, "Salir a patinar y caminar en el parque"],
+    [105, "No soy muy bueno en casi nada, pero puedo enseñarte"],
+    [110, "Nena, me siento perdido"],
+    [112, "Tengo una brújula que me lleva directo a encontrarte"],
+    [116, "En tu voz un arrullo, sonido"],
+    [120, "Corazón, te lo pido, ¿me dejarás amarte?"],
+    [123, "En tu nombre, mi sexto sentido"],
+    [127, "Mujer, ¿qué has hecho? Me dejaste viendo todo nublado"],
+    [129, "Hasta ahora, creo que nunca he querido"],
+    [133, "Contigo me di cuenta de verdad de qué es estar enamorado"],
+    [137, "Corro a ver mi celular cuando escucho un mensaje, pensando que será uno tuyo"],
+    [140, "Cuento los días en ocho para verte, no me importa si es tan solo un segundo"],
+    [144, "Puede que pasen los días, los meses, los años, pero en esa fila me incluyo"],
+    [147, "No puedo evitar sonrojarme si pienso en que tan cerca estamos de coincidir tú y yo"],
+    [151, "Eres tan linda como un suspiro del mar"],
+    [153, "En tus ojos se halla la luz de mi oscuridad"],
+    [157, "Eres el lado opuesto de mi imán"],
+    [161, "¿Dónde estabas, girl? ¿Dónde estabas, girl?"],
+    [164, "Eres tan linda como un suspiro del mar"],
+    [169, "En tus ojos se halla la luz de mi oscuridad"],
+    [171, "Eres el lado opuesto de mi imán"],
+    [175, "¿Dónde estabas, girl? ¿Dónde estabas, girl?"],
+    [180, "Dame tu mano y corramos tan rápido que los problemas jamás nos alcancen"],
+    [183, "Y que si uno nos toma por sorpresa, vayamos a la pieza y no le demos chance"],
+    [186, "Quiero recorrer el mundo a tu lado y explorar cada fondo hasta nuestro alcance"],
+    [189, "Quiero decir que te quiero y lo único que quiero en este momento es besarte"],
+    [193, "Nena, me siento perdido"],
+    [195, "Tengo una brújula que me lleva directo a encontrarte"],
+    [199, "En tu voz un arrullo, sonido"],
+    [202, "Corazón, te lo pido, ¿me dejarás amarte?"],
+    [207, "En tu nombre, mi sexto sentido"],
+    [209, "Mujer, ¿qué has hecho? Me dejaste viendo todo nublado"],
+    [213, "Hasta ahora, creo que nunca he querido"],
+    [217, "Contigo me di cuenta de verdad de qué es estar enamorado"]
+  ];
+  const INICIO = 26; // segundo de la canción donde empieza el coro
+
+  /* ============ Estado ============ */
+  const audio = document.getElementById('audio');
+  const lineaCur = document.getElementById('lineaCur');
+  const lineaPrev = document.getElementById('lineaPrev');
+  const karaoke = document.getElementById('karaoke');
+  const aurora = document.getElementById('aurora');
+  const prog = document.getElementById('prog');
+  let reproduciendo = false;
+
+  /* ============ Corazones cohete que explotan ============ */
+  let proyectiles = [], explosiones = [], lastT = 0;
+  let notas = [], lastN = 0;
+  let palabrasCur = [], curIniT = 0, curDur = 1;
+  function crearProyectiles() {
+    proyectiles = [];
+    explosiones = [];
+    const s = Math.min(W, H) * 0.0206;
+    const cx = W / 2, cy = H * 0.46;
+    // polígono del contorno para elegir objetivos por dentro del corazón
+    const poly = [];
+    for (let t = 0; t <= Math.PI * 2 + 0.03; t += 0.03) {
+      const hx = 16 * Math.pow(Math.sin(t), 3);
+      const hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+      poly.push([cx + hx * s, cy - hy * s]);
+    }
+    let minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9;
+    for (const p of poly) {
+      if (p[0] < minx) minx = p[0];
+      if (p[0] > maxx) maxx = p[0];
+      if (p[1] < miny) miny = p[1];
+      if (p[1] > maxy) maxy = p[1];
+    }
+    const CHS = ['💖', '❤️', '💕', '💗'];
+    for (let i = 0; i < 22; i++) {
+      const lado = Math.floor(Math.random() * 4);
+      const marg = 60;
+      let x, y;
+      if (lado === 0) { x = Math.random() * W; y = -marg; }
+      else if (lado === 1) { x = W + marg; y = Math.random() * H; }
+      else if (lado === 2) { x = Math.random() * W; y = H + marg; }
+      else { x = -marg; y = Math.random() * H; }
+      // objetivo: mezcla de puntos del interior y del borde
+      let tx2, ty2;
+      if (i % 3 !== 0) {
+        // punto del INTERIOR del corazón (con margen al borde)
+        let intentos = 0;
+        do {
+          tx2 = minx + Math.random() * (maxx - minx);
+          ty2 = miny + Math.random() * (maxy - miny);
+          intentos++;
+        } while (!puntoEnPoligono(tx2, ty2, poly) && intentos < 60);
+        if (intentos >= 60) { tx2 = cx; ty2 = cy; }
+      } else {
+        // punto SOBRE el contorno
+        const t = Math.random() * 6.2832;
+        const hx = 16 * Math.pow(Math.sin(t), 3);
+        const hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+        tx2 = cx + hx * s;
+        ty2 = cy - hy * s;
+      }
+      // 1 de cada 4 va en línea recta, el resto con curva (zigzag)
+      const curva = Math.random() < 0.75;
+      proyectiles.push({
+        sx: x, sy: y, x, y,
+        tx: tx2, ty: ty2,
+        d0: Math.hypot(tx2 - x, ty2 - y),
+        z: 0, started: false, px: x, py: y,
+        rot: Math.random() * 6.2832,
+        vr: (0.3 + Math.random() * 1.2) * (Math.random() < 0.5 ? 1 : -1),
+        ch: CHS[i % CHS.length],
+        sz: 15 + Math.random() * 14,
+        vel: 170 + Math.random() * 230,
+        wa: curva ? 12 + Math.random() * 22 : 0,
+        wf: 1.2 + Math.random() * 2.2,
+        ph: Math.random() * 6.2832,
+        ini: 1.0 + i * 2.2 + Math.random() * 2.0,
+        gone: false
+      });
+    }
+  }
+
+  /* ============ Reacción visual según la frase ============ */
+  function explotar(X, Y) {
+    for (let i = 0; i < 18; i++) {
+      const a = Math.random() * 6.2832;
+      const v = 50 + Math.random() * 190;
+      explosiones.push({
+        x: X, y: Y,
+        vx: Math.cos(a) * v,
+        vy: Math.sin(a) * v,
+        ini: performance.now() / 1000,
+        sz: 6 + Math.random() * 10,
+        ch: ['❤', '♡', '✦', '✧', '💕', '.'][Math.floor(Math.random() * 6)]
+      });
+    }
+  }
+
+  /* ============ Destellos dorados que flotan ============ */
+  let chispas = [];
+  function crearChispas() {
+    if (chispas.length) return;
+    for (let i = 0; i < 46; i++) {
+      chispas.push({
+        x: Math.random() * (W + 200) - 100,
+        y: Math.random() * (H + 200) - 100,
+        r: 0.8 + Math.random() * 2.2,
+        ph: Math.random() * 6.2832,
+        sp: 0.5 + Math.random() * 1.6
+      });
+    }
+  }
+
+  /* ============ ¿Estamos en el coro? ============ */
+  function chorusActual() {
+    if (!reproduciendo) return false;
+    const t = audio.currentTime - OFFSET;
+    let idx = -1;
+    for (let i = 0; i < LETRA.length; i++) {
+      if (t >= LETRA[i][0]) idx = i;
+      else break;
+    }
+    return idx >= 0 && (idx <= 7 || (idx >= 24 && idx <= 31) || (idx >= 48 && idx <= 55));
+  }
+
+  /* ============ Corazón formado por la palabra LOVE YOU ============ */
+  const PALABRA = "LOVE YOU";
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, partes = [], relleno = [], animId = null, formado = false, formaLista = false, t0 = 0, tFill = 0, fsLetra = 0;
+
+  function resize() {
+    W = canvas.width = innerWidth;
+    H = canvas.height = innerHeight;
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  // posiciones de las letras SOBRE la silueta del corazón (contorno)
+  function posicionesHeart() {
+    const s = Math.min(W, H) * 0.0206;
+    const cx = W / 2, cy = H * 0.46;
+    const pts = [];
+    for (let t = 0; t <= Math.PI * 2 + 0.02; t += 0.02) {
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+      pts.push({ x: cx + x * s, y: cy - y * s });
+    }
+    const acum = [0];
+    for (let i = 1; i < pts.length; i++) {
+      acum.push(acum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+    }
+    const perimetro = acum[acum.length - 1];
+    const fs = Math.max(10, Math.min(22, Math.min(W, H) / 70));
+    const paso = fs * 1.05;
+    const n = Math.max(60, Math.floor(perimetro / paso));
+    const pos = [];
+    for (let k = 0; k < n; k++) {
+      const d = (k * perimetro) / n;
+      let lo = 0, hi = acum.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (acum[mid] < d) lo = mid + 1; else hi = mid;
+      }
+      pos.push(pts[Math.min(lo, pts.length - 1)]);
+    }
+    return { pos, fs };
+  }
+
+  function iniciarCorazon() {
+    resize();
+    const { pos, fs } = posicionesHeart();
+    fsLetra = fs;
+    partes = pos.map((p, idx) => ({
+      tx: p.x, ty: p.y,
+      ch: PALABRA[idx % PALABRA.length],
+      ini: idx * 35   // cada letra aparece 35 ms después que la anterior
+    }));
+    formado = false;
+    t0 = performance.now();
+    cancelAnimationFrame(animId);
+    animar(fs);
+  }
+
+  function animar(fs) {
+    const ahora = performance.now() / 1000;
+    const dt = Math.min(0.05, ahora - (lastT || ahora));
+    lastT = ahora;
+    const enCoro = chorusActual();
+    const centroX = W / 2, centroY = H * 0.46;
+    const HS = Math.min(W, H) * 0.0206;
+
+    // karaoke palabra por palabra: ilumina cada palabra mientras se canta
+    if (reproduciendo && palabrasCur.length) {
+      const t = audio.currentTime - OFFSET;
+      const pct = Math.max(0, Math.min(1, (t - curIniT) / curDur));
+      const n = palabrasCur.length;
+      let iw = 0;
+      for (const nodo of lineaCur.childNodes) {
+        if (nodo.nodeType === 1 && nodo.className === 'pal') {
+          nodo.classList.toggle('on', pct >= iw / n);
+          iw++;
+        }
+      }
+    }
+
+    ctx.clearRect(0, 0, W, H);
+
+    // aura de color que va cambiando con la canción
+    const hue = (ahora * 9 + (enCoro ? 42 : 0)) % 360;
+    aurora.style.background = 'radial-gradient(120% 130% at 50% 28%, hsla(' + hue + ',85%,60%,' + (enCoro ? 0.16 : 0.09) + '), transparent 65%)';
+    document.body.classList.toggle('chorus', enCoro);
+
+    // resplandor fijo detrás del corazón (más fuerte en el coro)
+    const g = ctx.createRadialGradient(centroX, centroY, 8, centroX, centroY, HS * 22);
+    g.addColorStop(0, 'rgba(255,90,145,' + (0.13 + (enCoro ? 0.11 : 0)) + ')');
+    g.addColorStop(1, 'rgba(255,90,145,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // rayos de luz cruzando la pantalla
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    const beams = ['rgba(255,175,205,0.05)', 'rgba(210,150,255,0.05)'];
+    for (let b = 0; b < beams.length; b++) {
+      const bx = ((ahora * (45 + b * 28) + b * 500) % (W + 900)) - 450;
+      const bg2 = ctx.createLinearGradient(bx, 0, bx + 240, H);
+      bg2.addColorStop(0, 'rgba(0,0,0,0)');
+      bg2.addColorStop(0.5, beams[b]);
+      bg2.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = bg2;
+      ctx.fillRect(bx, 0, 240, H);
+    }
+    ctx.restore();
+
+    contornoFondo();
+    const el = performance.now() - t0;
+    const cores = ['#ff6f9f', '#ff8fb3', '#ffb3cd', '#ffffff'];
+    let visibles = 0;
+    for (const p of partes) {
+      if (el < p.ini) continue;
+      visibles++;
+      pintaLetra(p.tx, p.ty, p.ch, Math.min(1, (el - p.ini) / 400), cores[Math.floor(p.ini / 35) % cores.length], true);
+    }
+    // silueta completa → se marca, el relleno llega al empezar la letra
+    if (!formado && visibles >= partes.length) {
+      formado = true;
+    }
+    const el2 = performance.now() - tFill;
+    // el relleno se queda en el rosa clásico
+    for (const p of relleno) {
+      pintaLetra(p.tx, p.ty, p.ch, Math.min(1, (el2 - p.ini) / 300), '#ff8fb3', false, fsLetra * 1.15);
+    }
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+
+    // corazones cohete: algunos se disparan hacia el corazón y explotan
+    if (reproduciendo) {
+      for (const p of proyectiles) {
+        if (p.ini > ahora) continue;
+        p.z += p.vel * dt;
+        const along = Math.min(1, p.z / p.d0);
+        const bx = p.sx + (p.tx - p.sx) * along;
+        const by = p.sy + (p.ty - p.sy) * along;
+        const nx = -(p.ty - p.sy) / p.d0;
+        const ny = (p.tx - p.sx) / p.d0;
+        const wo = Math.sin(ahora * p.wf + p.ph) * p.wa * (1 - along * 0.75);
+        p.x = bx + nx * wo;
+        p.y = by + ny * wo;
+        p.rot += p.vr;
+        // estela del cohete
+        ctx.globalAlpha = 0.28;
+        ctx.strokeStyle = 'rgba(255,140,180,0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(p.px, p.py);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        p.px = p.x; p.py = p.y;
+        // brillo detrás del cohete
+        ctx.shadowColor = 'rgba(255,120,170,0.9)';
+        ctx.shadowBlur = 14;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.font = p.sz + 'px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.ch, 0, 0);
+        ctx.restore();
+        ctx.shadowBlur = 0;
+        if (along >= 1) {
+          p.gone = true;
+          explotar(p.x, p.y);
+        }
+      }
+      proyectiles = proyectiles.filter(p => !p.gone);
+
+      // explosiones: partículas (corazoncitos y chispas)
+      explosiones = explosiones.filter(e => ahora - e.ini < 0.9);
+      for (const e of explosiones) {
+        const t2 = Math.max(0, ahora - e.ini);
+        e.x += e.vx * dt;
+        e.y += e.vy * dt;
+        e.vx *= 0.90;
+        e.vy *= 0.90;
+        ctx.globalAlpha = Math.min(1, 1 - t2 / 0.9);
+        ctx.font = (e.sz + t2 * 18) + 'px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(e.ch, e.x, e.y);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // notas y símbolos que suben desde abajo (más densos en el coro)
+    if (reproduciendo) {
+      if (ahora - lastN > (enCoro ? 0.3 : 0.65)) {
+        lastN = ahora;
+        notas.push({
+          x: Math.random() * W,
+          y: H + 30,
+          vy: 40 + Math.random() * 80,
+          sway: 0.4 + Math.random() * 1.3,
+          ph: Math.random() * 6.2832,
+          ch: ['♪', '♫', '♩', '✿', '✦', '♡', '💞'][Math.floor(Math.random() * 7)],
+          sz: 13 + Math.random() * 18,
+          vr: (Math.random() - 0.5) * 3,
+          rot: (Math.random() - 0.5) * 0.8
+        });
+      }
+      notas = notas.filter(n => n.y > -50);
+      for (const n of notas) {
+        n.y -= n.vy * dt;
+        n.x += Math.sin(ahora * n.sway + n.ph) * 30 * dt;
+        n.rot += n.vr * dt;
+        const pct = Math.min(1, (H + 50 - n.y) / (H + 80));
+        ctx.globalAlpha = 0.25 + 0.75 * Math.sin(pct * Math.PI);
+        ctx.save();
+        ctx.translate(n.x, n.y);
+        ctx.rotate(n.rot);
+        ctx.font = n.sz + 'px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = n.cr || 'rgba(255,190,215,0.85)';
+        ctx.fillText(n.ch, 0, 0);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
+    for (const S of chispas) {
+      const a = 0.22 + 0.65 * Math.abs(Math.sin(ahora * S.sp + S.ph));
+      ctx.beginPath();
+      ctx.arc(S.x, S.y, S.r, 0, 6.2832);
+      ctx.fillStyle = 'rgba(255,' + Math.round(150 + 30 * Math.sin(ahora + S.ph)) + ',190,' + a + ')';
+      ctx.shadowColor = 'rgba(255,150,185,0.9)';
+      ctx.shadowBlur = 4;
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+
+    animId = requestAnimationFrame(() => animar(fs));
+  }
+
+  function pintaLetra(x, y, ch, local, color, conBrillo, tamaño) {
+    if (ch === ' ' || local <= 0) return;
+    const sz = tamaño || fsLetra;
+    ctx.save();
+    ctx.globalAlpha = local;
+    ctx.translate(x, y);
+    ctx.scale(0.5 + 0.5 * local, 0.5 + 0.5 * local);
+    ctx.font = `bold ${sz}px Georgia, serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (conBrillo) {
+      ctx.shadowColor = "rgba(255,105,160,0.95)";
+      ctx.shadowBlur = 10;
+    }
+    ctx.fillStyle = color;
+    ctx.fillText(ch, 0, 0);
+    ctx.restore();
+  }
+
+  // llena el corazón con LOVE YOU usando la MISMA silueta que el contorno
+  // (nada se sale del borde, sin huecos) y entra en desorden justo con la letra.
+  function rellenar() {
+    const s = Math.min(W, H) * 0.0206;
+    const cx = W / 2, cy = H * 0.46;
+    // polígono del contorno del corazón
+    const poly = [];
+    for (let t = 0; t <= Math.PI * 2 + 0.03; t += 0.03) {
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+      poly.push([cx + x * s, cy - y * s]);
+    }
+    // centroide, para recoger las letras un poco hacia el interior
+    let cxm = 0, cym = 0;
+    for (const p of poly) { cxm += p[0]; cym += p[1]; }
+    cxm /= poly.length; cym /= poly.length;
+    // caja que encierra el corazón
+    let minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9;
+    for (const p of poly) {
+      if (p[0] < minx) minx = p[0];
+      if (p[0] > maxx) maxx = p[0];
+      if (p[1] < miny) miny = p[1];
+      if (p[1] > maxy) maxy = p[1];
+    }
+    const paso = fsLetra * 0.8;
+    const pos = [];
+    for (let gy = miny; gy <= maxy; gy += paso) {
+      for (let gx = minx; gx <= maxx; gx += paso) {
+        if (!puntoEnPoligono(gx, gy, poly)) continue;
+        // 10% hacia el centro para dejar un margen fino con el borde
+        pos.push({ x: cxm + (gx - cxm) * 0.9, y: cym + (gy - cym) * 0.9 });
+      }
+    }
+    // orden disparejo (al azar) para que no salga en filas
+    for (let i = pos.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = pos[i]; pos[i] = pos[j]; pos[j] = tmp;
+    }
+    tFill = performance.now();
+    // aparecen una a una, despacio, dispersas por todo el corazón (~14 s)
+    relleno = pos.map((p, idx) => ({
+      tx: p.x, ty: p.y,
+      ch: PALABRA[idx % PALABRA.length],
+      ini: idx * 14
+    }));
+  }
+
+  // ¿el punto está dentro del polígono? (ray casting, respeta el hueco del corazón)
+  function puntoEnPoligono(x, y, poly) {
+    let dentro = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i][0], yi = poly[i][1];
+      const xj = poly[j][0], yj = poly[j][1];
+      if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) dentro = !dentro;
+    }
+    return dentro;
+  }
+
+  // contorno tenue del corazón mientras llegan las letras
+  function contornoFondo() {
+    const s = Math.min(W, H) * 0.0206;
+    const cx = W / 2, cy = H * 0.46;
+    ctx.beginPath();
+    for (let t = 0; t <= Math.PI * 2; t += 0.05) {
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+      const px = cx + x * s, py = cy - y * s;
+      t === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = 'rgba(255,150,190,0.15)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  /* ============ Inicio: TODO ocurre con el click ============ */
+  function iniciar() {
+    document.getElementById('portada').classList.add('oculta');
+    crearChispas();
+    crearProyectiles();
+    lastT = 0;
+    palabrasCur = [];
+    relleno = [];
+    formaLista = false;
+    formado = false;
+    // la canción arranca YA con el click (silenciada una fracción
+    // de segundo para garantizar el autoplay del navegador)
+    audio.muted = true;
+    audio.currentTime = 0;
+    audio.play().then(() => {
+      reproduciendo = true;
+      setTimeout(() => { audio.muted = false; }, 1200);
+    }).catch(() => {});
+    iniciarCorazon();
+    flotantes();
+  }
+
+  /* ============ Letra en pantalla ============ */
+  /* ============ Ajuste de la letra ============
+     OFFSET: la letra sale un micro segundo tarde → la adelantamos
+     un pelín (2.5 s en vez de 3). */
+  const OFFSET = 2.5;
+  audio.addEventListener('timeupdate', () => {
+    if (!reproduciendo) return;
+    if (audio.currentTime >= INICIO + OFFSET - 0.5) {
+      if (!karaoke.classList.contains('visible')) karaoke.classList.add('visible');
+      // el corazón se rellena justo cuando empieza la letra
+      if (!formaLista) { formaLista = true; rellenar(); }
+    }
+    const t = audio.currentTime - OFFSET;
+    let idx = -1;
+    for (let i = 0; i < LETRA.length; i++) {
+      if (t >= LETRA[i][0]) idx = i;
+      else break;
+    }
+    if (idx === -1) return;
+    const cur = LETRA[idx][1];
+    const prev = idx > 0 ? LETRA[idx - 1][1] : '';
+    if (cur !== lineaCur.dataset.c) {
+      lineaCur.dataset.c = cur;
+      lineaPrev.textContent = prev;
+      lineaCur.classList.remove('cambio');
+      void lineaCur.offsetWidth;
+      lineaCur.classList.add('cambio');
+      // karaoke palabra por palabra
+      const iniT = LETRA[idx][0];
+      const finT = idx + 1 < LETRA.length ? LETRA[idx + 1][0] : iniT + 4;
+      const dur = Math.max(1.6, finT - iniT);
+      palabrasCur = cur.split(/\s+/);
+      curIniT = iniT;
+      curDur = dur;
+      lineaCur.textContent = '';
+      for (const w of palabrasCur) {
+        const s = document.createElement('span');
+        s.className = 'pal';
+        s.textContent = w;
+        lineaCur.appendChild(s);
+        lineaCur.appendChild(document.createTextNode(' '));
+      }
+      // barra de progreso de la frase actual
+      prog.style.transition = 'none';
+      prog.style.transform = 'scaleX(0)';
+      void prog.offsetWidth;
+      prog.style.transition = 'transform ' + dur + 's linear';
+      prog.style.transform = 'scaleX(1)';
+    }
+  });
+
+  /* ============ Corazones flotantes ============ */
+  function flotantes() {
+    for (let i = 0; i < 20; i++) {
+      const s = document.createElement('div');
+      s.className = 'corazon';
+      s.textContent = i % 2 ? '❤️' : '💖';
+      s.style.left = Math.random() * 100 + 'vw';
+      s.style.fontSize = (14 + Math.random() * 28) + 'px';
+      s.style.animationDuration = (7 + Math.random() * 8) + 's';
+      s.style.animationDelay = (Math.random() * 7) + 's';
+      document.body.appendChild(s);
+    }
+  }
+
+  audio.addEventListener('error', () => {
+    document.getElementById('falta').classList.add('active');
+  }, { once: true });
+  audio.addEventListener('loadedmetadata', () => document.getElementById('falta').classList.remove('active'));
+</script>
+</body>
+</html>
