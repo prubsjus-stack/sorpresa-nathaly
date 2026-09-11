@@ -90,6 +90,23 @@
     60% { transform: scale(1.04); opacity: 1; }
     100% { transform: scale(1); opacity: 1; }
   }
+  /* tarjeta de frase de las galaxias */
+  #galCard {
+    position: fixed; left: 50%; top: 52%; transform: translate(-50%, -50%);
+    z-index: 40; text-align: center; pointer-events: none;
+    max-width: 86%; opacity: 0; transition: opacity .8s ease;
+  }
+  #galCard.visible { opacity: 1; }
+  #galCard .nom {
+    font-size: clamp(30px, 7vw, 56px); font-weight: 800; color: #ffe1e9;
+    letter-spacing: 3px; text-transform: uppercase;
+    text-shadow: 0 0 18px rgba(255,150,190,.95), 0 0 42px rgba(255,220,160,.6);
+  }
+  #galCard .tex {
+    margin-top: 12px; font-family: Georgia, serif; font-style: italic;
+    font-size: clamp(20px, 4vw, 30px); color: #fff0f5;
+    text-shadow: 0 0 12px rgba(255,120,165,.95);
+  }
   #prog {
     height: 4px; width: 100%; max-width: 420px; border-radius: 4px;
     background: linear-gradient(90deg, #e8336d, #ffb3cd);
@@ -174,6 +191,12 @@
   <div id="prog"></div>
   <div id="lineaPrev"></div>
   <div id="lineaCur"></div>
+</div>
+
+<!-- Tarjeta de frase de galaxia -->
+<div id="galCard">
+  <div class="nom"></div>
+  <div class="tex"></div>
 </div>
 
 <!-- Mensaje final -->
@@ -299,7 +322,7 @@
   let proyectiles = [], explosiones = [], lastT = 0;
   let notas = [], lastN = 0;
   let palabrasCur = [], curIniT = 0, curDur = 1;
-  let galaxiaInicio = -1, rotAng = 0, camZ = 0;
+  let galaxiaInicio = -1, rotAng = 0, camZ = 0, cn = null, vuelta = null, heartBack = 0;
   function crearProyectiles() {
     proyectiles = [];
     explosiones = [];
@@ -527,8 +550,9 @@
     const tG = gal ? ahora - galaxiaInicio : 9999;
     const minS = Math.min(W, H);
     const heartA = gal ? Math.pow(1 - Math.min(1, tG / 4.5), 1.4) : 1;
+    const heartFade = vuelta ? heartBack : heartA;
 
-    if (gal) {
+    if (gal && !vuelta) {
       // fondo oscuro estilo galaxia (cada vez más profundo)
       const osc = Math.max(0, Math.min(1, (tG - 1) / 2.5));
       const gbg = ctx.createRadialGradient(centroX, centroY * 1.05, 0, centroX, centroY * 1.05, minS * 0.85);
@@ -545,7 +569,7 @@
     }
 
     // silueta del corazón (se desvanece cuando llega la galaxia)
-    ctx.globalAlpha = gal ? heartA : 1;
+    ctx.globalAlpha = heartFade;
     contornoFondo();
     const el = performance.now() - t0;
     const cores = ['#ff6f9f', '#ff8fb3', '#ffb3cd', '#ffffff'];
@@ -553,7 +577,7 @@
     for (const p of partes) {
       if (el < p.ini) continue;
       visibles++;
-      pintaLetra(p.tx, p.ty, p.ch, Math.min(1, (el - p.ini) / 400) * (gal ? heartA : 1), cores[Math.floor(p.ini / 35) % cores.length], true);
+      pintaLetra(p.tx, p.ty, p.ch, Math.min(1, (el - p.ini) / 400) * heartFade, cores[Math.floor(p.ini / 35) % cores.length], true);
     }
     // silueta completa → se marca, el relleno llega al empezar la letra
     if (!formado && visibles >= partes.length) {
@@ -762,9 +786,22 @@
     return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
   }
 
+  const GALAXIAS = [
+    { nombre: 'TÚ', frase: 'la que me saca una sonrisa con solo aparecer' },
+    { nombre: 'tus ojos', frase: 'cuando te miro se me olvida hasta mi nombre' },
+    { nombre: 'tu carita', frase: 'para saber qué es la perfección solo miro tu cara' },
+    { nombre: 'tu personalidad', frase: 'te quiero por cómo sos y no por cómo te ves' },
+    { nombre: 'tu risa', frase: 'cuando te reís se me arregla el día entero' },
+    { nombre: 'tenerte cerca', frase: 'tu presencia me da más paz que mil palabras' },
+    { nombre: 'nuestro tiempo', frase: 'cada minuto a tu lado vale más que una vida entera' },
+    { nombre: 'tú y yo', frase: 'el destino nos puso en la misma historia' }
+  ];
+
   function iniciarGalaxia() {
     const n = relleno.length;
     const minS = Math.min(W, H);
+    cn = null; vuelta = null; heartBack = 0;
+    document.getElementById('galCard').classList.remove('visible');
     for (let i = 0; i < n; i++) {
       const p = relleno[i];
       const t = i / n;
@@ -780,6 +817,8 @@
 
   function pintarGalaxia(tG, dt, minS) {
     const cx = W / 2, cy = H * 0.46;
+    if (vuelta) { pintarVuelta(minS); return; }
+    if (cn) { pintarConstelacion(minS); return; }
     if (tG < 9) rotAng += 0.09 * dt;
     else rotAng += (0.15 + Math.min(1, (tG - 9) * 0.2)) * dt;
     if (tG > 9) camZ += dt * 95;
@@ -788,17 +827,21 @@
     if (tG > 9) {
       // ---------- TÚNEL: cámara adentrándose al espiral (sin fin) ----------
       const foc = 620;
+      const cerca = 45, lejos = 260;
       for (const p of relleno) {
-        if (foc + (p.z - camZ) < 45) p.z += 1600;
+        if (foc + (p.z - camZ) < cerca) p.z += 1600;
       }
       const orden = relleno.slice().sort((a, b) => (b.z - camZ) - (a.z - camZ));
       for (const p of orden) {
         const dz = p.z - camZ;
         const f = foc / (foc + dz);
+        let a = Math.min(0.95, 0.35 + f * 0.05);
+        // desaparecen suave al pasar a tu lado en vez de aparecer de golpe
+        if (foc + dz < lejos) a *= Math.max(0, (foc + dz - cerca) / (lejos - cerca));
         const th = p.gt + rotAng;
         const X = cx + Math.cos(th) * p.gr * f;
         const Y = cy + Math.sin(th) * p.gr * f * 0.62;
-        pintaLetra(X, Y, p.ch, Math.min(0.95, 0.35 + f * 0.05), '#ff8fb3', false, fsLetra * Math.min(2.6, 0.8 + f * 0.14));
+        pintaLetra(X, Y, p.ch, a, '#ff8fb3', false, fsLetra * Math.min(2.6, 0.8 + f * 0.14));
       }
       // estela luminosa en el centro del túnel
       const ng = ctx.createRadialGradient(cx, cy, 0, cx, cy, minS * 0.18);
@@ -817,6 +860,139 @@
       const X = p.tx + (tx2 - p.tx) * interp;
       const Y = p.ty + (ty2 - p.ty) * interp;
       pintaLetra(X, Y, p.ch, 0.55 + 0.45 * interp, '#ff8fb3', false, fsLetra * (1.15 - 0.32 * interp));
+    }
+  }
+
+  // cada LOVE YOU viaja a su pequeña galaxia que dice "TU" y se lee una frase
+  function iniciarConstelacion() {
+    const n = relleno.length;
+    const G = GALAXIAS.length;
+    const minS = Math.min(W, H);
+    cn = { inicio: performance.now() / 1000, frac: 0, frase: -1, spin: 0, intro: false, zoom: 1, cx: W / 2, cy: H * 0.46 };
+    cn.centros = [];
+    for (let g = 0; g < G; g++) {
+      const a = (g / G) * Math.PI * 2 + 0.35;
+      cn.centros.push({
+        x: W / 2 + Math.cos(a) * (minS * 0.27),
+        y: H * 0.46 + Math.sin(a) * (minS * 0.20)
+      });
+    }
+    for (let i = 0; i < n; i++) {
+      const p = relleno[i];
+      p.gp = i % G;
+      p.cr = 6 + (i % 60);
+      p.ct = i * 2.4;
+    }
+  }
+
+  function pintarConstelacion(minS) {
+    const ahora = performance.now() / 1000;
+    const te = ahora - cn.inicio;
+    const G = GALAXIAS.length;
+    const PER = 6.2;
+    const gi = Math.min(G - 1, Math.floor(te / PER));
+    const fl = te - gi * PER;
+    const e = suavizar(Math.max(0, Math.min(1, (fl - 0.2) / 2.6)));
+    const cAct = cn.centros[gi];
+    const cAnt = gi === 0 ? { x: W / 2, y: H * 0.46 } : cn.centros[gi - 1];
+    cn.cx = cAnt.x + (cAct.x - cAnt.x) * e;
+    cn.cy = cAnt.y + (cAct.y - cAnt.y) * e;
+    cn.zoom = 1 + 1.15 * e;
+    cn.spin = (cn.spin || 0) + (1 / 60) * 0.12;
+    if (te < 3.2) {
+      // tarjeta intro: "MI MUNDO" / "cosas que me gustan de ti"
+      if (!cn.intro) {
+        cn.intro = true;
+        const card = document.getElementById('galCard');
+        card.querySelector('.nom').textContent = 'MI MUNDO';
+        card.querySelector('.tex').textContent = '"cosas que me gustan de ti"';
+        card.classList.add('visible');
+      }
+    } else {
+      if (cn.intro) { cn.intro = false; ocultarFrase(); }
+      if (cn.frase !== gi && fl >= 2.8) {
+        cn.frase = gi;
+        mostrarFrase(gi);
+      } else if (cn.frase === gi && fl > PER - 1.0) {
+        cn.frase = -1;
+        ocultarFrase();
+      }
+    }
+    // cámara centrada en la galaxia activa
+    ctx.save();
+    ctx.translate(W / 2, H * 0.46);
+    ctx.scale(cn.zoom, cn.zoom);
+    ctx.translate(-cn.cx, -cn.cy);
+    for (const p of relleno) {
+      const cc = cn.centros[p.gp];
+      const ang = p.ct + cn.spin;
+      const X = cc.x + Math.cos(ang) * p.cr;
+      const Y = cc.y + Math.sin(ang) * p.cr * 0.72;
+      const activo = p.gp === gi;
+      const sz = activo ? fsLetra * 0.9 : fsLetra * 0.42;
+      const a = activo ? 0.9 : 0.3;
+      pintaLetra(X, Y, p.ch, a, activo ? '#ffd9a0' : '#ff8fb3', activo, sz);
+    }
+    ctx.restore();
+    // aura de la galaxia activa, centrada en pantalla
+    const ng = ctx.createRadialGradient(W / 2, H * 0.46, 0, W / 2, H * 0.46, minS * 0.22);
+    const de = Math.min(0.5, 0.22 + (cn.frase === gi ? 0.2 : 0));
+    ng.addColorStop(0, 'rgba(255,180,205,' + de + ')');
+    ng.addColorStop(1, 'rgba(255,180,205,0)');
+    ctx.fillStyle = ng;
+    ctx.fillRect(0, 0, W, H);
+    if (te > G * PER + 0.5) iniciarVuelta();
+  }
+
+  function mostrarFrase(gi) {
+    const card = document.getElementById('galCard');
+    card.querySelector('.nom').textContent = GALAXIAS[gi].nombre;
+    card.querySelector('.tex').textContent = '"' + GALAXIAS[gi].frase + '"';
+    card.classList.add('visible');
+  }
+
+  function ocultarFrase() {
+    document.getElementById('galCard').classList.remove('visible');
+  }
+
+  // la cámara se aleja y los LOVE YOU vuelven a formar el corazón
+  function iniciarVuelta() {
+    ocultarFrase();
+    vuelta = { inicio: performance.now() / 1000 };
+    const cx = W / 2, cy = H * 0.46;
+    for (const p of relleno) {
+      const cc = cn.centros[p.gp];
+      const ang = p.ct + cn.spin;
+      const X = cc.x + Math.cos(ang) * p.cr;
+      const Y = cc.y + Math.sin(ang) * p.cr * 0.72;
+      p.vx0 = (X - cn.cx) * cn.zoom + cx;
+      p.vy0 = (Y - cn.cy) * cn.zoom + cy;
+    }
+  }
+
+  function pintarVuelta(minS) {
+    const ahora = performance.now() / 1000;
+    const tv = ahora - vuelta.inicio;
+    const k = suavizar(Math.min(1, tv / 4.2));
+    // el fondo galaxia se apaga mientras vuelve el corazón
+    const off = 1 - k;
+    const gbg = ctx.createRadialGradient(W / 2, H * 0.46, 0, W / 2, H * 0.46, minS * 0.85);
+    gbg.addColorStop(0, 'rgba(26,8,52,' + (0.28 * off) + ')');
+    gbg.addColorStop(0.6, 'rgba(8,2,24,' + (0.55 * off) + ')');
+    gbg.addColorStop(1, 'rgba(1,0,8,' + (0.92 * off) + ')');
+    ctx.fillStyle = gbg;
+    ctx.fillRect(0, 0, W, H);
+    heartBack = k;
+    for (const p of relleno) {
+      const X = p.vx0 + (p.tx - p.vx0) * k;
+      const Y = p.vy0 + (p.ty - p.vy0) * k;
+      pintaLetra(X, Y, p.ch, 0.9 * Math.min(1, k + 0.15), '#ff8fb3', false, fsLetra * (1.35 - 0.4 * k));
+    }
+    if (tv > 4.2) {
+      vuelta = null;
+      cn = null;
+      heartBack = 0;
+      galaxiaInicio = -1;
     }
   }
 
@@ -855,6 +1031,10 @@
     lastT = 0;
     palabrasCur = [];
     galaxiaInicio = -1;
+    cn = null;
+    vuelta = null;
+    heartBack = 0;
+    document.getElementById('galCard').classList.remove('visible');
     finalShown = false;
     finalMsg.classList.remove('visible');
     relleno = [];
@@ -922,9 +1102,13 @@
       prog.style.transform = 'scaleX(1)';
     }
     // cuando suena "pensé en cómo podría acercarme" arranca la galaxia
-    if (galaxiaInicio < 0 && idx >= 9 && t >= LETRA[9][0] + 0.5) {
+    if (galaxiaInicio < 0 && idx >= 9 && t >= LETRA[9][0] + 5.5) {
       galaxiaInicio = performance.now() / 1000;
       iniciarGalaxia();
+    }
+    // cuando dice "pero no hablemos de mí" la galaxia se vuelve constelación
+    if (cn === null && vuelta === null && galaxiaInicio >= 0 && idx >= 13 && t >= LETRA[13][0] + 1) {
+      iniciarConstelacion();
     }
     // cuando el cantante termina, aparece el mensaje final
     if (!finalShown && idx === LETRA.length - 1 && t >= LETRA[idx][0] + 4.5) {
