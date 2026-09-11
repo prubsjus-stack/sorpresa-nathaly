@@ -134,9 +134,24 @@
   /* ---------- Corazones flotantes ---------- */
   .corazon { position: absolute; bottom: -60px; color: rgba(255,120,160,0.5); filter: drop-shadow(0 0 8px rgba(255,100,150,0.5)); animation: subir linear infinite; z-index: 1; }
   @keyframes subir { 0%{transform:translateY(0) rotate(0) scale(.6); opacity:0} 10%{opacity:1} 90%{opacity:1} 100%{transform:translateY(-110vh) rotate(30deg) scale(1.2); opacity:0} }
+
+  /* ---------- Contador de tiempo juntos ---------- */
+  #contador {
+    position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 60;
+    font-family: Consolas, monospace; font-size: clamp(12px, 2.6vw, 18px);
+    color: rgba(255,225,235,0.95); white-space: nowrap;
+    background: rgba(20,3,35,0.55);
+    border: 1px solid rgba(255,150,190,0.3);
+    border-radius: 999px; padding: 7px 16px;
+    box-shadow: 0 2px 14px rgba(255,105,160,0.25);
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
+
+<!-- Contador de tiempo juntos (siempre visible) -->
+<div id="contador">💞 Llevamos juntos...</div>
 
 <!-- Canción de fondo (MP3 local) -->
 <audio id="audio" preload="auto" src="musica/sexto_sentido.mp3"></audio>
@@ -256,6 +271,21 @@
   const aurora = document.getElementById('aurora');
   const prog = document.getElementById('prog');
   const finalMsg = document.getElementById('final');
+  const contador = document.getElementById('contador');
+  const DESDE = new Date(2026, 3, 9, 20, 7, 0); // 9 de abril, 8:07 PM
+  function actualizarContador() {
+    let s = Math.floor((Date.now() - DESDE) / 1000);
+    if (s < 0) { contador.textContent = '💞 Llevamos juntos...'; return; }
+    const dias = Math.floor(s / 86400);
+    s %= 86400;
+    const hh = String(Math.floor(s / 3600)).padStart(2, '0');
+    s %= 3600;
+    const mm = String(Math.floor(s / 60)).padStart(2, '0');
+    const ss = String(s % 60).padStart(2, '0');
+    contador.textContent = '💞 Llevamos juntos ' + dias + ' días ' + hh + ':' + mm + ':' + ss;
+  }
+  actualizarContador();
+  setInterval(actualizarContador, 1000);
   let reproduciendo = false;
   let finalShown = false;
 
