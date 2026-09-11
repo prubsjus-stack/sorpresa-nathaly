@@ -61,14 +61,29 @@
     transition: opacity 1.6s ease;
   }
   #final.visible { opacity: 1; }
-  #final p {
-    font-size: clamp(26px, 5.5vw, 44px); font-weight: 700; line-height: 1.55;
-    color: #ffe3ee;
-    text-shadow: 0 0 8px rgba(255,105,160,0.95), 0 0 30px rgba(255,105,160,0.7);
-    background: rgba(10,1,18,0.45);
-    padding: 34px 40px; border-radius: 22px;
-    border: 1px solid rgba(255,160,190,0.35);
+  #final .card {
+    max-width: 640px;
+    background: radial-gradient(circle at 50% 0%, rgba(255,120,170,0.22), rgba(12,2,22,0.55) 70%);
+    border: 1px solid rgba(255,170,200,0.4);
+    border-radius: 26px;
+    padding: 46px 42px;
+    box-shadow: 0 0 60px rgba(255,105,160,0.35), inset 0 0 40px rgba(255,140,180,0.12);
     animation: finalPop 1s ease both;
+  }
+  #final .corazon-final {
+    font-size: clamp(52px, 10vw, 84px); line-height: 1;
+    animation: latidoFinal 1.4s ease-in-out infinite;
+    margin-bottom: 14px;
+  }
+  @keyframes latidoFinal {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.22); }
+  }
+  #final p {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(26px, 5vw, 42px); font-weight: 700; line-height: 1.6;
+    color: #fff0f5;
+    text-shadow: 0 0 10px rgba(255,120,160,0.9), 0 0 34px rgba(255,105,160,0.6);
   }
   @keyframes finalPop {
     0% { transform: scale(.82); opacity: 0; }
@@ -148,7 +163,10 @@
 
 <!-- Mensaje final -->
 <div id="final">
-  <p>gracias por compartir<br>cada día con este tonto<br>y loco por ti ❤️</p>
+  <div class="card">
+    <div class="corazon-final">💖</div>
+    <p>gracias por compartir<br>cada día con este tonto<br>y loco por ti ❤️</p>
+  </div>
 </div>
 
 <!-- Aviso si falta el MP3 -->
@@ -239,9 +257,13 @@
   const prog = document.getElementById('prog');
   const finalMsg = document.getElementById('final');
   let reproduciendo = false;
+  let finalShown = false;
 
-  // al terminar la canción se muestra el mensaje final
-  audio.addEventListener('ended', () => finalMsg.classList.add('visible'));
+  // al terminar la canción también se muestra (por si el audio es corto)
+  audio.addEventListener('ended', () => {
+    finalShown = true;
+    finalMsg.classList.add('visible');
+  });
 
   /* ============ Corazones cohete que explotan ============ */
   let proyectiles = [], explosiones = [], lastT = 0;
@@ -698,6 +720,8 @@
     crearProyectiles();
     lastT = 0;
     palabrasCur = [];
+    finalShown = false;
+    finalMsg.classList.remove('visible');
     relleno = [];
     formaLista = false;
     formado = false;
@@ -761,6 +785,11 @@
       void prog.offsetWidth;
       prog.style.transition = 'transform ' + dur + 's linear';
       prog.style.transform = 'scaleX(1)';
+    }
+    // cuando el cantante termina, aparece el mensaje final
+    if (!finalShown && idx === LETRA.length - 1 && t >= LETRA[idx][0] + 4.5) {
+      finalShown = true;
+      finalMsg.classList.add('visible');
     }
   });
 
