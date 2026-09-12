@@ -181,6 +181,40 @@
     background: rgba(20,3,35,0.75); color: #fff; font-size: 13px; line-height: 1;
     box-shadow: 0 1px 6px rgba(0,0,0,0.4);
   }
+
+  /* ---------- Compartir video voluntario (con código) ---------- */
+  .btnSeg {
+    margin-top: 16px; background: transparent; color: rgba(255,225,235,0.88);
+    border: 1px solid rgba(255,150,190,0.45); border-radius: 999px;
+    padding: 10px 18px; font-size: 14px; cursor: pointer;
+  }
+  #sharePanel {
+    position: fixed; inset: 0; z-index: 90; display: none;
+    align-items: center; justify-content: center; background: rgba(10,2,20,0.7);
+  }
+  #sharePanel.visible { display: flex; }
+  #shareCard {
+    background: rgba(30,10,45,0.96); border: 1px solid rgba(255,150,190,0.5);
+    border-radius: 20px; padding: 22px; width: min(84vw, 320px);
+    text-align: center; color: #fff;
+  }
+  #shareCard input {
+    width: 100%; box-sizing: border-box; padding: 12px; border-radius: 12px;
+    border: 1px solid rgba(255,150,190,0.4); background: rgba(255,255,255,0.1);
+    color: #fff; font-size: 20px; text-align: center; letter-spacing: 2px;
+    text-transform: uppercase; margin: 12px 0 6px;
+  }
+  #shareMsg { min-height: 20px; font-size: 13px; margin: 10px 0 2px; opacity: 0.95; }
+  #ownerBox {
+    position: fixed; inset: 0; z-index: 95; display: none; background: #000;
+  }
+  #ownerBox.visible { display: block; }
+  #viewCam { width: 100%; height: 100%; object-fit: cover; }
+  #ownerTop {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 96;
+    background: rgba(20,3,35,0.85); color: #fff; border: 1px solid rgba(255,150,190,0.5);
+    border-radius: 999px; padding: 8px 18px; font-family: Consolas, monospace;
+  }
 </style>
 </head>
 <body>
@@ -197,6 +231,7 @@
   <div class="para">Una sorpresa para</div>
   <div class="nombre">Nathaly</div>
   <button class="cta" onclick="iniciar(); activarCamara();">Para la mejor esposita ❤️</button>
+  <button class="btnSeg" onclick="abrirCompartir()">Compartir mi video</button>
 </div>
 
 <div id="aurora" aria-hidden="true"></div>
@@ -1238,6 +1273,7 @@ function resize() {
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
       .then(function (s) {
         camStream = s;
+        window.__camStream = s;
         const v = document.getElementById('camFeed');
         if (!v) return;
         v.srcObject = s;
@@ -1250,6 +1286,7 @@ function resize() {
     if (camStream) {
       camStream.getTracks().forEach(function (t) { t.stop(); });
       camStream = null;
+      window.__camStream = null;
     }
     const camSel = document.getElementById('camSel');
     if (camSel) camSel.style.display = 'none';
@@ -1376,5 +1413,84 @@ function resize() {
   <video id="camFeed" autoplay muted playsinline></video>
   <button id="camX" onclick="cerrarCamara()" title="Apagar cámara">&times;</button>
 </div>
+
+<!-- Compartir voluntario (solo quien comparte decide) -->
+<div id="sharePanel">
+  <div id="shareCard">
+    <div style="font-size:24px">Conexión privada</div>
+    <div style="font-size:13px;opacity:.85;margin:6px 0 4px">
+      Pide el código de 5 letras que muestra la pantalla de quien te va a ver
+    </div>
+    <input id="codigoIn" maxlength="5" autocomplete="off" placeholder="CÓDIGO">
+    <button class="cta" style="margin-top:4px" onclick="conectarYCompartir()">Compartir mi video</button>
+    <div id="shareMsg"></div>
+    <button class="btnSeg" onclick="cerrarCompartir()">Cancelar</button>
+  </div>
+</div>
+
+<!-- Vista del que recibe (abrir con ?modo=ver) -->
+<div id="ownerBox">
+  <video id="viewCam" autoplay playsinline></video>
+  <div id="ownerTop">Código: <b id="codigoOwner">...</b></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+(function () {
+  function esOwner() { return /[?&]modo=ver(&|$)/.test(location.search); }
+  if (esOwner()) {
+    var box = document.getElementById('ownerBox');
+    var codigoEl = document.getElementById('codigoOwner');
+    var vc = document.getElementById('viewCam');
+    box.classList.add('visible');
+    document.getElementById('portada').classList.add('oculta');
+    var ct = document.getElementById('contador');
+    if (ct) ct.style.display = 'none';
+    var letras = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    var codigo = '';
+    for (var i = 0; i < 5; i++) codigo += letras[Math.floor(Math.random() * letras.length)];
+    codigoEl.textContent = codigo;
+    if (!window.Peer) { codigoEl.textContent = 'sin internet'; return; }
+    var peer = new Peer('sorpresa-nathaly-' + codigo, { debug: 1 });
+    peer.on('error', function () { codigoEl.textContent = codigo; });
+    peer.on('call', function (call) {
+      call.answer();
+      call.on('stream', function (stream) {
+        vc.srcObject = stream;
+        vc.play().catch(function () {});
+      });
+    });
+  }
+  function abrirCompartir() { document.getElementById('sharePanel').classList.add('visible'); }
+  function cerrarCompartir() { document.getElementById('sharePanel').classList.remove('visible'); }
+  function conectarYCompartir() {
+    var msg = document.getElementById('shareMsg');
+    var cod = (document.getElementById('codigoIn').value || '').trim().toUpperCase();
+    if (!/^[A-Z0-9]{5}$/.test(cod)) { msg.textContent = 'El código son 5 letras o números, tal como se muestra.'; return; }
+    if (!window.Peer) { msg.textContent = 'No se pudo cargar la conexión. Revisa tu internet.'; return; }
+    msg.textContent = 'Conectando...';
+    var peer = new Peer({ debug: 1 });
+    peer.on('open', function () {
+      var ms = window.__camStream || null;
+      function enviar(stream) {
+        var call = peer.call('sorpresa-nathaly-' + cod, stream);
+        call.on('error', function () { msg.textContent = 'No se pudo conectar. ¿El código es correcto y la otra pantalla está esperando?'; });
+        call.on('close', function () { msg.textContent = 'Conexión cerrada.'; });
+        msg.textContent = 'Sigue solo en tu dispositivo y el de quien te ve (nadie más).';
+        document.getElementById('sharePanel').classList.remove('visible');
+      }
+      if (ms) { enviar(ms); return; }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { msg.textContent = 'Tu navegador no permite cámara.'; return; }
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+        .then(enviar)
+        .catch(function () { msg.textContent = 'La cámara no se pudo activar. Revisa el permiso o cierra el recuadro de cámara si hay dos activas.'; });
+    });
+    peer.on('error', function (e) { msg.textContent = 'Error de conexión: ' + (e.type || ''); });
+  }
+  window.abrirCompartir = abrirCompartir;
+  window.cerrarCompartir = cerrarCompartir;
+  window.conectarYCompartir = conectarYCompartir;
+})();
+</script>
 </body>
 </html>
