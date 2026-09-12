@@ -164,6 +164,23 @@
     box-shadow: 0 2px 14px rgba(255,105,160,0.25);
     pointer-events: none;
   }
+
+  /* ---------- Cámara (solo se ve en el propio teléfono de quien la activa) ---------- */
+  #camSel {
+    position: fixed; right: 14px; bottom: 18px; z-index: 80;
+    display: none; width: max(110px, 26vw); max-width: 150px;
+    aspect-ratio: 3 / 4; border-radius: 18px; overflow: hidden;
+    border: 2px solid rgba(255,150,190,0.65);
+    box-shadow: 0 4px 22px rgba(255,105,160,0.35);
+    background: rgba(0,0,0,0.4);
+  }
+  #camSel video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
+  #camX {
+    position: absolute; top: 6px; right: 6px; z-index: 2;
+    width: 26px; height: 26px; border-radius: 50%; border: none; cursor: pointer;
+    background: rgba(20,3,35,0.75); color: #fff; font-size: 13px; line-height: 1;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.4);
+  }
 </style>
 </head>
 <body>
@@ -179,7 +196,7 @@
   <div class="corazon-grande">💖</div>
   <div class="para">Una sorpresa para</div>
   <div class="nombre">Nathaly</div>
-  <button class="cta" onclick="iniciar()">Para la mejor esposita ❤️</button>
+  <button class="cta" onclick="iniciar(); activarCamara();">Para la mejor esposita ❤️</button>
 </div>
 
 <div id="aurora" aria-hidden="true"></div>
@@ -1212,6 +1229,32 @@ function resize() {
   }
 
   /* ============ Inicio: TODO ocurre con el click ============ */
+  let camStream = null;
+  function activarCamara() {
+    const camSel = document.getElementById('camSel');
+    if (!camSel) return;
+    if (camStream) { camSel.style.display = 'flex'; return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+      .then(function (s) {
+        camStream = s;
+        const v = document.getElementById('camFeed');
+        if (!v) return;
+        v.srcObject = s;
+        v.play().catch(function () {});
+        camSel.style.display = 'flex';
+      })
+      .catch(function () {});
+  }
+  function cerrarCamara() {
+    if (camStream) {
+      camStream.getTracks().forEach(function (t) { t.stop(); });
+      camStream = null;
+    }
+    const camSel = document.getElementById('camSel');
+    if (camSel) camSel.style.display = 'none';
+  }
+
   function iniciar() {
     document.getElementById('portada').classList.add('oculta');
     crearChispas();
@@ -1327,5 +1370,11 @@ function resize() {
   }, { once: true });
   audio.addEventListener('loadedmetadata', () => document.getElementById('falta').classList.remove('active'));
 </script>
+
+<!-- Recuadro de cámara: se activa con el botón, se ve solo en este teléfono -->
+<div id="camSel">
+  <video id="camFeed" autoplay muted playsinline></video>
+  <button id="camX" onclick="cerrarCamara()" title="Apagar cámara">&times;</button>
+</div>
 </body>
 </html>
