@@ -443,15 +443,15 @@
   let W, H, partes = [], relleno = [], animId = null, formado = false, formaLista = false, t0 = 0, tFill = 0, fsLetra = 0;
 
   function resize() {
-    // tamaño REAL del canvas visible (coincide siempre con lo que se ve en
-    // pantalla, en cualquier celular o zoom del navegador)
-    let r = canvas.getBoundingClientRect();
-    // si el CSS todavía no terminó de aplicar el tamaño (canvas diminuto),
-    // usa la ventana visible para no quedar chiquito arriba a la izquierda
-    if (r.width < 40 || r.height < 40) r = { width: innerWidth, height: innerHeight };
-    const nW = Math.max(1, Math.round(r.width));
-    const nH = Math.max(1, Math.round(r.height));
-    if (nW === W && nH === H) return;
+    // el canvas SIEMPRE ocupa la ventana visible, sin depender del CSS
+    // (estilos inline: sobreviven a fallos de CSS, zoom o navegadores viejos)
+    const nW = Math.max(1, Math.round(innerWidth));
+    const nH = Math.max(1, Math.round(innerHeight));
+    canvas.style.position = 'fixed';
+    canvas.style.top = '0px';
+    canvas.style.left = '0px';
+    canvas.style.width = nW + 'px';
+    canvas.style.height = nH + 'px';
     W = canvas.width = nW;
     H = canvas.height = nH;
     // si la canción ya arrancó, recalcula el corazón para que siga centrado
