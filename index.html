@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:,">
 <title>Para Nathaly ❤️</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -442,8 +443,26 @@
   let W, H, partes = [], relleno = [], animId = null, formado = false, formaLista = false, t0 = 0, tFill = 0, fsLetra = 0;
 
   function resize() {
-    W = canvas.width = innerWidth;
-    H = canvas.height = innerHeight;
+    const vv = window.visualViewport;
+    const nW = Math.round(vv ? vv.width : innerWidth);
+    const nH = Math.round(vv ? vv.height : innerHeight);
+    if (nW === W && nH === H) return;
+    W = canvas.width = nW;
+    H = canvas.height = nH;
+    // si la canción ya arrancó, recalcula el corazón para que siga centrado
+    if (formaLista && partes.length && galaxiaInicio < 0) {
+      const { pos, fs } = posicionesHeart();
+      fsLetra = fs;
+      for (let i = 0; i < pos.length && i < partes.length; i++) {
+        partes[i].tx = pos[i].x;
+        partes[i].ty = pos[i].y;
+      }
+      rellenar();
+    }
+  }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', resize);
+    window.visualViewport.addEventListener('scroll', resize);
   }
   addEventListener('resize', resize);
   resize();
@@ -792,7 +811,7 @@
     { nombre: 'tu carita', frase: 'para saber qué es la perfección solo miro tu cara' },
     { nombre: 'tu personalidad', frase: 'te quiero por cómo eres y no por cómo te ves' },
     { nombre: 'tu risa', frase: 'cuando te ríes se me ilumina el día entero' },
-    { nombre: 'tenerte cerca', frase: 'tu presencia me da más paz que mil palabras' },
+    { nombre: 'tu abrazo', frase: 'cuando me abrazas el mundo se queda en silencio' },
     { nombre: 'nuestro tiempo', frase: 'cada minuto a tu lado vale más que una vida entera' },
     { nombre: 'tú y yo', frase: 'el destino nos puso en la misma historia' }
   ];
