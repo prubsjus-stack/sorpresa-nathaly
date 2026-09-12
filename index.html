@@ -18,7 +18,7 @@
 
   /* ---------- Portada ---------- */
   #portada {
-    position: fixed; inset: 0; z-index: 60;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 60;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 26px; text-align: center;
     background: radial-gradient(circle at center, rgba(30,5,50,0.92) 0%, rgba(18,2,30,0.98) 100%);
@@ -39,10 +39,10 @@
   .cta:hover { transform: scale(1.06); box-shadow: 0 0 42px rgba(255,105,160,1); }
 
   /* ---------- Lienzo ---------- */
-  #canvas { position: fixed; inset: 0; z-index: 5; display: block; }
+  #canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; display: block; }
 
   /* ---------- Aura de color animada ---------- */
-  #aurora { position: fixed; inset: -10%; z-index: 4; pointer-events: none; }
+  #aurora { position: fixed; top: -10%; left: -10%; width: 120%; height: 120%; z-index: 4; pointer-events: none; }
 
   /* ---------- Letra -------------------------------------------------- */
   #karaoke {
@@ -55,7 +55,7 @@
   #karaoke.visible { opacity: 1; }
   /* ---------- Mensaje final ---------- */
   #final {
-    position: fixed; inset: 0; z-index: 30;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 30;
     display: flex; align-items: center; justify-content: center;
     text-align: center; padding: 0 8%;
     opacity: 0; pointer-events: none;
@@ -136,7 +136,7 @@
 
   /* ---------- Aviso si falta la canción ---------- */
   #falta {
-    position: fixed; inset: 0; z-index: 90; display: none;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 90; display: none;
     align-items: center; justify-content: center; padding: 24px; text-align: center;
     background: radial-gradient(circle, rgba(26,5,51,0.96), rgba(12,2,20,0.99));
   }
@@ -445,7 +445,10 @@
   function resize() {
     // tamaño REAL del canvas visible (coincide siempre con lo que se ve en
     // pantalla, en cualquier celular o zoom del navegador)
-    const r = canvas.getBoundingClientRect();
+    let r = canvas.getBoundingClientRect();
+    // si el CSS todavía no terminó de aplicar el tamaño (canvas diminuto),
+    // usa la ventana visible para no quedar chiquito arriba a la izquierda
+    if (r.width < 40 || r.height < 40) r = { width: innerWidth, height: innerHeight };
     const nW = Math.max(1, Math.round(r.width));
     const nH = Math.max(1, Math.round(r.height));
     if (nW === W && nH === H) return;
@@ -468,6 +471,8 @@
   }
   addEventListener('resize', resize);
   addEventListener('orientationchange', resize);
+  addEventListener('load', resize);
+  setTimeout(resize, 250);
   resize();
 
   // posiciones de las letras SOBRE la silueta del corazón (contorno)
